@@ -16,25 +16,43 @@ if ($zoneData['success']) {
     $errorMsg = $zoneData['error'];
 }
 
-// 2. Handle Add DNS Record
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_record' && $zoneId) {
-    $type = $_POST['type'] ?? 'A';
-    $name = $_POST['name'] ?? '';
-    if ($name === '@') {
-        $name = $selectedDomain;
-    } elseif (strpos($name, $selectedDomain) === false) {
-        $name = $name . '.' . $selectedDomain;
-    }
-    
-    $content = $_POST['content'] ?? '';
-    $ttl = (int)($_POST['ttl'] ?? 1);
-    $proxied = isset($_POST['proxied']) ? true : false;
-    
-    $addRes = addDnsRecord($zoneId, $type, $name, $content, $ttl, $proxied);
-    if ($addRes['success']) {
-        $successMsg = "DNS Record added successfully!";
+// 2. Handle Form Submissions (Add, Edit, Delete)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $zoneId) {
+    if ($_POST['action'] === 'delete_record' && isset($_POST['record_id'])) {
+        $deleteRes = deleteDnsRecord($zoneId, $_POST['record_id']);
+        if ($deleteRes['success']) {
+            $successMsg = "DNS Record deleted successfully!";
+        } else {
+            $errorMsg = $deleteRes['error'];
+        }
     } else {
-        $errorMsg = $addRes['error'];
+        $type = $_POST['type'] ?? 'A';
+        $name = $_POST['name'] ?? '';
+        if ($name === '@') {
+            $name = $selectedDomain;
+        } elseif (strpos($name, $selectedDomain) === false) {
+            $name = $name . '.' . $selectedDomain;
+        }
+        
+        $content = $_POST['content'] ?? '';
+        $ttl = (int)($_POST['ttl'] ?? 1);
+        $proxied = isset($_POST['proxied']) ? true : false;
+        
+        if ($_POST['action'] === 'add_record') {
+            $addRes = addDnsRecord($zoneId, $type, $name, $content, $ttl, $proxied);
+            if ($addRes['success']) {
+                $successMsg = "DNS Record added successfully!";
+            } else {
+                $errorMsg = $addRes['error'];
+            }
+        } elseif ($_POST['action'] === 'edit_record' && isset($_POST['record_id'])) {
+            $updateRes = updateDnsRecord($zoneId, $_POST['record_id'], $type, $name, $content, $ttl, $proxied);
+            if ($updateRes['success']) {
+                $successMsg = "DNS Record updated successfully!";
+            } else {
+                $errorMsg = $updateRes['error'];
+            }
+        }
     }
 }
 
@@ -121,8 +139,8 @@ if ($zoneId) {
                 </div>
                 
                 <div class="form-group checkbox-group">
-                    <input type="checkbox" name="proxied" id="proxied" checked>
-                    <label for="proxied">Proxy status</label>
+                    <input type="checkbox" name="proxied" id="proxied_add" checked>
+                    <label for="proxied_add">Proxy status</label>
                 </div>
             </div>
             
@@ -143,6 +161,7 @@ if ($zoneId) {
                         <th>Content</th>
                         <th>Proxy Status</th>
                         <th>TTL</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,6 +178,16 @@ if ($zoneId) {
                                 <?php endif; ?>
                             </td>
                             <td><?= $record['ttl'] === 1 ? 'Auto' : htmlspecialchars($record['ttl']) ?></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-sm btn-secondary" onclick="openEditModal('<?= htmlspecialchars($record['id']) ?>', '<?= htmlspecialchars($record['type']) ?>', '<?= htmlspecialchars($record['name']) ?>', '<?= htmlspecialchars(addslashes($record['content'])) ?>', '<?= $record['ttl'] ?>', <?= $record['proxied'] ? 'true' : 'false' ?>)">Edit</button>
+                                    <form method="POST" action="?domain=<?= urlencode($selectedDomain) ?>" onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                        <input type="hidden" name="action" value="delete_record">
+                                        <input type="hidden" name="record_id" value="<?= htmlspecialchars($record['id']) ?>">
+                                        <button type="submit" class="btn-sm btn-danger">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -169,6 +198,91 @@ if ($zoneId) {
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Edit DNS Record</h2>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <form method="POST" action="?domain=<?= urlencode($selectedDomain) ?>">
+            <input type="hidden" name="action" value="edit_record">
+            <input type="hidden" name="record_id" id="edit_record_id">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select name="type" id="edit_type" required>
+                        <option value="A">A</option>
+                        <option value="AAAA">AAAA</option>
+                        <option value="CNAME">CNAME</option>
+                        <option value="TXT">TXT</option>
+                        <option value="MX">MX</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" id="edit_name" placeholder="@ for root" required>
+                </div>
+                
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Content</label>
+                    <input type="text" name="content" id="edit_content" placeholder="IP address or target" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>TTL</label>
+                    <select name="ttl" id="edit_ttl">
+                        <option value="1">Auto</option>
+                        <option value="120">2 min</option>
+                        <option value="300">5 min</option>
+                        <option value="3600">1 hr</option>
+                    </select>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="proxied" id="edit_proxied">
+                    <label for="edit_proxied">Proxy status</label>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" class="btn-sm btn-secondary" onclick="closeEditModal()" style="font-size: 1rem; padding: 0.75rem 1.5rem;">Cancel</button>
+                <button type="submit">Update Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditModal(id, type, name, content, ttl, proxied) {
+        document.getElementById('edit_record_id').value = id;
+        document.getElementById('edit_type').value = type;
+        
+        let domain = '<?= htmlspecialchars($selectedDomain) ?>';
+        if (name === domain) {
+            document.getElementById('edit_name').value = '@';
+        } else {
+            document.getElementById('edit_name').value = name.replace('.' + domain, '');
+        }
+        
+        document.getElementById('edit_content').value = content;
+        document.getElementById('edit_ttl').value = ttl;
+        document.getElementById('edit_proxied').checked = proxied;
+        
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+</script>
 
 </body>
 </html>

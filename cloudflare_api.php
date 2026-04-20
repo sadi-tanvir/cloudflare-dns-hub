@@ -64,3 +64,31 @@ function addDnsRecord($zoneId, $type, $name, $content, $ttl, $proxied) {
         return ['success' => false, 'error' => "Failed to add record: " . $errorDetails];
     }
 }
+
+function updateDnsRecord($zoneId, $recordId, $type, $name, $content, $ttl, $proxied) {
+    $putData = [
+        'type' => $type,
+        'name' => $name,
+        'content' => $content,
+        'ttl' => $ttl,
+        'proxied' => $proxied
+    ];
+    
+    $updateRes = cloudflareApiRequest("zones/{$zoneId}/dns_records/{$recordId}", 'PUT', $putData);
+    if ($updateRes['code'] == 200 && $updateRes['body']['success']) {
+        return ['success' => true];
+    } else {
+        $errorDetails = $updateRes['body']['errors'][0]['message'] ?? 'Unknown error';
+        return ['success' => false, 'error' => "Failed to update record: " . $errorDetails];
+    }
+}
+
+function deleteDnsRecord($zoneId, $recordId) {
+    $deleteRes = cloudflareApiRequest("zones/{$zoneId}/dns_records/{$recordId}", 'DELETE');
+    if ($deleteRes['code'] == 200 && $deleteRes['body']['success']) {
+        return ['success' => true];
+    } else {
+        $errorDetails = $deleteRes['body']['errors'][0]['message'] ?? 'Unknown error';
+        return ['success' => false, 'error' => "Failed to delete record: " . $errorDetails];
+    }
+}
