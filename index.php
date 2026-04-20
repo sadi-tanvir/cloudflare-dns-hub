@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/cloudflare_api.php';
 
@@ -79,17 +80,23 @@ if ($zoneId) {
 
 <div class="container">
     <div class="header">
-        <h1>DNS Manager</h1>
-        <div class="domain-selector">
-            <form method="GET" action="">
-                <select name="domain" onchange="this.form.submit()">
-                    <?php foreach ($domains as $domain): ?>
-                        <option value="<?= htmlspecialchars($domain) ?>" <?= $domain === $selectedDomain ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($domain) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+        <div>
+            <h1>DNS Manager</h1>
+            <div style="font-size: 0.875rem; color: var(--text-muted);">Logged in as <?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="domain-selector">
+                <form method="GET" action="">
+                    <select name="domain" onchange="this.form.submit()">
+                        <?php foreach ($domains as $domain): ?>
+                            <option value="<?= htmlspecialchars($domain) ?>" <?= $domain === $selectedDomain ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($domain) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+            </div>
+            <a href="logout.php" class="btn-sm btn-danger" style="text-decoration: none; padding: 0.75rem 1rem;">Logout</a>
         </div>
     </div>
 
