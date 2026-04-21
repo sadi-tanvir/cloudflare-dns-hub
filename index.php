@@ -74,7 +74,11 @@ if ($zoneId) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style.css?v=<?= filemtime(__DIR__ . '/assets/style.css') ?>">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
 </head>
 <body>
 
@@ -85,6 +89,7 @@ if ($zoneId) {
             <div style="font-size: 0.875rem; color: var(--text-muted);">Logged in as <?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></div>
         </div>
         <div style="display: flex; align-items: center; gap: 1rem;">
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme"></button>
             <div class="domain-selector">
                 <form method="GET" action="">
                     <select name="domain" onchange="this.form.submit()">
@@ -289,6 +294,34 @@ if ($zoneId) {
     document.getElementById('editModal').addEventListener('click', function(e) {
         if (e.target === this) closeEditModal();
     });
+
+    // Theme Toggle Logic
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const htmlEl = document.documentElement;
+    
+    // Moon icon for dark mode (to switch to light)
+    const moonIcon = `<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+    // Sun icon for light mode (to switch to dark)
+    const sunIcon = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+
+    function updateThemeIcon() {
+        if(htmlEl.getAttribute('data-theme') === 'light') {
+            themeToggleBtn.innerHTML = moonIcon;
+        } else {
+            themeToggleBtn.innerHTML = sunIcon;
+        }
+    }
+    
+    if (themeToggleBtn) {
+        updateThemeIcon();
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = htmlEl.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            htmlEl.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon();
+        });
+    }
 </script>
 
 </body>
