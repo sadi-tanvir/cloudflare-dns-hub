@@ -8,7 +8,7 @@ A powerful and developer-friendly application to manage Cloudflare DNS, zones, a
 
 **Cloudflare DNS Hub** is a complete management system that allows you to handle multiple domains (zones), manage DNS records, and control user access — all in one place.
 
-This tool is designed for developers, system administrators, and SaaS platforms যারা Cloudflare automation করতে চান।
+This tool is designed for developers and system administrators.
 
 ---
 
