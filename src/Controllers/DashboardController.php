@@ -78,6 +78,8 @@ class DashboardController {
             $recordsData = $this->cloudflareService->getDnsRecords($zoneId);
             if ($recordsData['success']) {
                 $dnsRecords = $recordsData['records'];
+            } else {
+                $errorMsg = $recordsData['error'];
             }
         }
 

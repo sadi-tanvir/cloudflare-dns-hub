@@ -63,11 +63,22 @@ class CloudflareService {
     }
 
     public function getDnsRecords($zoneId) {
-        $res = $this->makeRequest('GET', "zones/$zoneId/dns_records?per_page=100");
-        if ($res['success']) {
-            return ['success' => true, 'records' => $res['data']['result']];
-        }
-        return $res;
+        $records = [];
+        $page = 1;
+
+        // Cloudflare paginates this endpoint, so keep fetching until every page is read.
+        do {
+            $res = $this->makeRequest('GET', "zones/$zoneId/dns_records?per_page=100&page=$page");
+            if (!$res['success']) {
+                return $res;
+            }
+
+            $records = array_merge($records, $res['data']['result']);
+            $totalPages = $res['data']['result_info']['total_pages'] ?? 1;
+            $page++;
+        } while ($page <= $totalPages);
+
+        return ['success' => true, 'records' => $records];
     }
 
     public function addDnsRecord($zoneId, $type, $name, $content, $ttl, $proxied) {
